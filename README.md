@@ -13,3 +13,6 @@ The truncated string shall not to exceed n characters including ellipsis under t
 - do not break a word apart;
 - do not break a html element apart;
 - all open tags must be closed in an appropriate order.
+
+
+My solution is written in JavaScript using some of ES6 features. A working demo can be viewed [here](https://souserge.github.io/intern-task/index.html).
