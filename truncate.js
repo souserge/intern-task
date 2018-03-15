@@ -1,37 +1,85 @@
 
+const ellipsis = '…'
 function truncate(htmlStr, n) {
-    const ellipsis = '…'
-
-
-}
-
-function walkHtml(htmlStr, n) {
-    currPos = 0;
-    numChars = 0;
+    currPos = 0
+    numChars = 0
+    let tagStack = []
     while (currPos < htmlStr.length) {
         const c = htmlStr[i]
-        if (c == '<') {
+        if (c === '<') {
             let tag = readTag(htmlStr, currPos)
+            if (tag.isClosing) {
+                if (tagStack[tagStack.length - 1] === tag.tagname) {
+                    tagStack.pop()
+                }
+            }
+            else {
+                tagStack.push(tag.tagname)
+            }
+            currPos = tag.newPos
         }
         else {
-            // readWord();
+            let word = readWord(htmlStr, currPos)
+            let len = word.newPos - currPos
+            if (numChars + len >= n) {
+                let cutPoint = -1
+                const maxFromCurr = n - numChars
+                if (maxFromCurr <= word.spaceNum) {
+                    cutPoint = currPos + maxFromCurr
+                } else {
+                    cutPoint = currPos
+                }
+                htmlStr[cutPoint] = ellipsis
+                return appendClosingTags(htmlStr.slice(0, cutPoint+1), tagStack)
+            } else {
+                currPos = word.newPos
+                numChars += len
+            }
         }
-
-        currPos++
     }
+    return htmlStr
+}
+
+function appendClosingTags(htmlStr, tagStack) {
+    while (tagStack.length > 0) {
+        htmlStr += '</' + tagStack.pop() + '>'
+    }
+    return htmlStr
+}
+
+function readWord(htmlStr, currPos) {
+    let word = ''
+    let {spaceNum, newPos} = readSpaces(htmlStr, currPos)
+    while (newPos < htmlStr.length) {
+        if (htmlStr[newPos] === ' ' || htmlStr[newPos] === '<') {
+            return {word, newPos, spaceNum}
+        }
+        word += htmlStr[newPos]
+        newPos += 1
+    }
+
+    return null
+}
+
+function readSpaces(htmlStr, currPos) {
+    let newPos = currPos
+    while (newPos < htmlStr.length && htmlStr[newPos] === ' ') {
+        newPos += 1
+    }
+    return {spaceNum: newPos - currPos, newPos}
 }
 
 function readTag(htmlStr, currPos) {
     const isClosing = isClosingTag(htmlStr, currPos)
-    let tagname
-    ({tagname, currPos} = readTagname(htmlStr, currPos+1+isClosing)) // can be an error
+    let {tagname, newPos} = readTagname(htmlStr, currPos+1+isClosing) // can be an error
 
-    while (currPos < htmlStr.length) {
-        if (htmlStr[currPos] === '>') {
-           return {tagname, currPos, isClosing} 
+    while (newPos < htmlStr.length) {
+        if (htmlStr[newPos] === '>') {
+           return {tagname, newPos, isClosing} 
         } //TODO: check for self-closing tag
-        currPos += 1
+        newPos += 1
     }
+    return null;
 }
 
 function isClosingTag(htmlStr, currPos) {
@@ -41,11 +89,12 @@ function isClosingTag(htmlStr, currPos) {
 
 function readTagname(htmlStr, currPos) {
     let tagname = ''
-    while (currPos < htmlStr.length) {
-        if (htmlStr[currPos] === ' ') {
-            return { tagname, currPos }
+    let newPos = currPos
+    while (newPos < htmlStr.length) {
+        if (htmlStr[newPos] === ' ') {
+            return { tagname, newPos }
         }
-        tagname += htmlStr[currPos]
-        currPos += 1
+        tagname += htmlStr[newPos]
+        newPos += 1
     }
 }
